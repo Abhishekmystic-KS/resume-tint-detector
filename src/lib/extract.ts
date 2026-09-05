@@ -38,16 +38,16 @@ async function extractPdf(file: File): Promise<Extracted> {
     meta: {
       fileName: file.name,
       pages: doc.numPages,
-      producer: String(info.Producer ?? ""),
-      creator: String(info.Creator ?? ""),
-      title: String(info.Title ?? ""),
-      author: String(info.Author ?? ""),
+      producer: String(info['Producer'] ?? ""),
+      creator: String(info['Creator'] ?? ""),
+      title: String(info['Title'] ?? ""),
+      author: String(info['Author'] ?? ""),
     },
   };
 }
 
 async function extractDocx(file: File): Promise<Extracted> {
-  const mammoth = await import("mammoth/mammoth.browser");
+  const mammoth = (await import("mammoth/mammoth.browser")) as typeof import("mammoth");
   const buf = await file.arrayBuffer();
   const res = await mammoth.extractRawText({ arrayBuffer: buf });
   return { text: res.value.trim(), meta: { fileName: file.name } };
