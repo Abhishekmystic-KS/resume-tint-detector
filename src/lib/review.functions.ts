@@ -14,8 +14,6 @@ export type ReviewResult = {
   error?: string;
 };
 
-import { REVIEW_SYSTEM as SYSTEM, buildReviewPrompt } from "./review-prompt";
-
 
 export const reviewResume = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => Input.parse(data))
@@ -29,14 +27,7 @@ export const reviewResume = createServerFn({ method: "POST" })
       const result = await generateText({
         model: gateway("google/gemini-3.7-flash"),
         system: SYSTEM,
-        prompt: [
-          data.findings.length
-            ? `Automated scanner already flagged: ${data.findings.join("; ")}.`
-            : "The automated scanner flagged nothing structural.",
-          "",
-          "RESUME TEXT:",
-          data.text,
-        ].join("\n"),
+        prompt: buildReviewPrompt(data.text, data.findings),
         maxRetries: 1,
       });
       return { ok: true, markdown: result.text };
