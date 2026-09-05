@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { REVIEW_SYSTEM as SYSTEM, buildReviewPrompt } from "./review-prompt";
 
 const Input = z.object({
   text: z.string().min(40).max(24000),
