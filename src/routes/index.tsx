@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSegments, cleanText, scanResume, type Finding, type ScanReport } from "@/lib/detect";
 import { extractFile } from "@/lib/extract";
 import { reviewResume, type ReviewResult } from "@/lib/review.functions";
+import { loadUserKey, reviewWithUserKey, saveUserKey } from "@/lib/user-gemini";
 import { ReviewMarkdown } from "@/components/ReviewMarkdown";
 
 export const Route = createFileRoute("/")({
@@ -48,6 +49,17 @@ function Index() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const runReview = useServerFn(reviewResume);
+  const [userKey, setUserKey] = useState("");
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
+
+  useEffect(() => {
+    const stored = loadUserKey();
+    if (stored) {
+      setUserKey(stored);
+      setKeySaved(true);
+    }
+  }, []);
 
   const run = useCallback(async (file: File) => {
     setBusy(true);
@@ -85,20 +97,21 @@ function Index() {
     if (!report) return;
     setReviewing(true);
     setReview(null);
+    const text = report.text.slice(0, 24000);
+    const findings = report.findings.map((f) => f.title);
     try {
-      const res = await runReview({
-        data: {
-          text: report.text.slice(0, 24000),
-          findings: report.findings.map((f) => f.title),
-        },
-      });
+      const trimmed = userKey.trim();
+      const res = trimmed
+        ? await reviewWithUserKey(trimmed, text, findings)
+        : await runReview({ data: { text, findings } });
       setReview(res);
     } catch (e) {
       setReview({ ok: false, error: (e as Error).message });
     } finally {
       setReviewing(false);
     }
-  }, [report, runReview]);
+  }, [report, runReview, userKey]);
+
 
   const segments = useMemo(
     () => (report ? buildSegments(report.text, report.findings) : []),
