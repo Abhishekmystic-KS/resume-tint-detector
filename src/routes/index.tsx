@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSegments, cleanText, scanResume, type Finding, type ScanReport } from "@/lib/detect";
 import { extractFile } from "@/lib/extract";
 import { reviewResume, type ReviewResult } from "@/lib/review.functions";
+import { loadUserKey, reviewWithUserKey, saveUserKey } from "@/lib/user-gemini";
 import { ReviewMarkdown } from "@/components/ReviewMarkdown";
 
 export const Route = createFileRoute("/")({
@@ -48,6 +49,17 @@ function Index() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const runReview = useServerFn(reviewResume);
+  const [userKey, setUserKey] = useState("");
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
+
+  useEffect(() => {
+    const stored = loadUserKey();
+    if (stored) {
+      setUserKey(stored);
+      setKeySaved(true);
+    }
+  }, []);
 
   const run = useCallback(async (file: File) => {
     setBusy(true);
@@ -85,20 +97,21 @@ function Index() {
     if (!report) return;
     setReviewing(true);
     setReview(null);
+    const text = report.text.slice(0, 24000);
+    const findings = report.findings.map((f) => f.title);
     try {
-      const res = await runReview({
-        data: {
-          text: report.text.slice(0, 24000),
-          findings: report.findings.map((f) => f.title),
-        },
-      });
+      const trimmed = userKey.trim();
+      const res = trimmed
+        ? await reviewWithUserKey(trimmed, text, findings)
+        : await runReview({ data: { text, findings } });
       setReview(res);
     } catch (e) {
       setReview({ ok: false, error: (e as Error).message });
     } finally {
       setReviewing(false);
     }
-  }, [report, runReview]);
+  }, [report, runReview, userKey]);
+
 
   const segments = useMemo(
     () => (report ? buildSegments(report.text, report.findings) : []),
@@ -332,6 +345,76 @@ function Index() {
                 {reviewing ? "Reading…" : review?.ok ? "Read again" : "Get the rewrite"}
               </button>
             </div>
+
+            <div className="mt-4 rounded-xl border border-edge bg-surface/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+                  {keySaved ? "Running on your own Gemini key" : "Using the built-in reader"}
+                </p>
+                <button
+                  onClick={() => setKeyOpen((v) => !v)}
+                  className="text-[12px] text-high underline-offset-4 hover:underline"
+                >
+                  {keyOpen ? "Hide" : keySaved ? "Change key" : "Use my own Gemini key"}
+                </button>
+              </div>
+
+              {keyOpen && (
+                <div className="mt-3">
+                  <p className="text-[12.5px] leading-relaxed text-mute">
+                    Paste a free Google AI Studio key and the rewrite runs on your own quota. The
+                    key stays in this browser only — it is sent straight to Google, never to this
+                    site.{" "}
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-high underline-offset-4 hover:underline"
+                    >
+                      Get a free key
+                    </a>
+                    .
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      type="password"
+                      value={userKey}
+                      onChange={(e) => {
+                        setUserKey(e.target.value);
+                        setKeySaved(false);
+                      }}
+                      placeholder="AIza…"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="min-w-[240px] flex-1 rounded-lg border border-edge bg-surface2 px-3 py-2 font-mono text-[12.5px] text-pale outline-none placeholder:text-mute focus:border-high/60"
+                    />
+                    <button
+                      onClick={() => {
+                        saveUserKey(userKey.trim());
+                        setKeySaved(Boolean(userKey.trim()));
+                        setKeyOpen(false);
+                      }}
+                      className="rounded-lg border border-edge bg-surface2 px-3 py-2 text-[12.5px] text-pale hover:border-high/50"
+                    >
+                      Save
+                    </button>
+                    {keySaved && (
+                      <button
+                        onClick={() => {
+                          saveUserKey("");
+                          setUserKey("");
+                          setKeySaved(false);
+                        }}
+                        className="rounded-lg border border-edge px-3 py-2 text-[12.5px] text-mute hover:text-pale"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
 
             {reviewing ? (
               <div className="glowline mt-5 scan-sweep" />
