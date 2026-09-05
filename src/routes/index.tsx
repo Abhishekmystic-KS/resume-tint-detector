@@ -346,6 +346,76 @@ function Index() {
               </button>
             </div>
 
+            <div className="mt-4 rounded-xl border border-edge bg-surface/60 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+                  {keySaved ? "Running on your own Gemini key" : "Using the built-in reader"}
+                </p>
+                <button
+                  onClick={() => setKeyOpen((v) => !v)}
+                  className="text-[12px] text-high underline-offset-4 hover:underline"
+                >
+                  {keyOpen ? "Hide" : keySaved ? "Change key" : "Use my own Gemini key"}
+                </button>
+              </div>
+
+              {keyOpen && (
+                <div className="mt-3">
+                  <p className="text-[12.5px] leading-relaxed text-mute">
+                    Paste a free Google AI Studio key and the rewrite runs on your own quota. The
+                    key stays in this browser only — it is sent straight to Google, never to this
+                    site.{" "}
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-high underline-offset-4 hover:underline"
+                    >
+                      Get a free key
+                    </a>
+                    .
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <input
+                      type="password"
+                      value={userKey}
+                      onChange={(e) => {
+                        setUserKey(e.target.value);
+                        setKeySaved(false);
+                      }}
+                      placeholder="AIza…"
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="min-w-[240px] flex-1 rounded-lg border border-edge bg-surface2 px-3 py-2 font-mono text-[12.5px] text-pale outline-none placeholder:text-mute focus:border-high/60"
+                    />
+                    <button
+                      onClick={() => {
+                        saveUserKey(userKey.trim());
+                        setKeySaved(Boolean(userKey.trim()));
+                        setKeyOpen(false);
+                      }}
+                      className="rounded-lg border border-edge bg-surface2 px-3 py-2 text-[12.5px] text-pale hover:border-high/50"
+                    >
+                      Save
+                    </button>
+                    {keySaved && (
+                      <button
+                        onClick={() => {
+                          saveUserKey("");
+                          setUserKey("");
+                          setKeySaved(false);
+                        }}
+                        className="rounded-lg border border-edge px-3 py-2 text-[12.5px] text-mute hover:text-pale"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+
             {reviewing ? (
               <div className="glowline mt-5 scan-sweep" />
             ) : review ? (
