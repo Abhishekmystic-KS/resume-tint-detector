@@ -3,8 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSegments, cleanText, scanResume, type Finding, type ScanReport } from "@/lib/detect";
 import { extractFile } from "@/lib/extract";
-import { reviewResume, type ReviewResult } from "@/lib/review.functions";
-import { loadUserKey, reviewWithUserKey, saveUserKey } from "@/lib/user-gemini";
+import { matchJob, reviewResume, type ReviewResult } from "@/lib/review.functions";
+import { loadUserKey, matchWithUserKey, reviewWithUserKey, saveUserKey } from "@/lib/user-gemini";
 import { ReviewMarkdown } from "@/components/ReviewMarkdown";
 
 export const Route = createFileRoute("/")({
@@ -49,6 +49,10 @@ function Index() {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const runReview = useServerFn(reviewResume);
+  const runMatch = useServerFn(matchJob);
+  const [jd, setJd] = useState("");
+  const [match, setMatch] = useState<ReviewResult | null>(null);
+  const [matching, setMatching] = useState(false);
   const [userKey, setUserKey] = useState("");
   const [keyOpen, setKeyOpen] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
@@ -65,6 +69,7 @@ function Index() {
     setBusy(true);
     setError(null);
     setReview(null);
+    setMatch(null);
     try {
       const { text, meta } = await extractFile(file);
       if (text.replace(/\s/g, "").length < 60) {
@@ -88,6 +93,7 @@ function Index() {
     }
     setError(null);
     setReview(null);
+    setMatch(null);
     setReport(scanResume(paste, { fileName: "pasted text" }));
     setActive(null);
     setPasteOpen(false);
@@ -111,6 +117,29 @@ function Index() {
       setReviewing(false);
     }
   }, [report, runReview, userKey]);
+
+  const askMatch = useCallback(async () => {
+    if (!report) return;
+    if (jd.replace(/\s/g, "").length < 60) {
+      setMatch({ ok: false, error: "Paste a bit more of the job description — at least a few lines." });
+      return;
+    }
+    setMatching(true);
+    setMatch(null);
+    const text = report.text.slice(0, 24000);
+    const jobText = jd.slice(0, 12000);
+    try {
+      const trimmed = userKey.trim();
+      const res = trimmed
+        ? await matchWithUserKey(trimmed, text, jobText)
+        : await runMatch({ data: { text, jd: jobText } });
+      setMatch(res);
+    } catch (e) {
+      setMatch({ ok: false, error: (e as Error).message });
+    } finally {
+      setMatching(false);
+    }
+  }, [report, jd, runMatch, userKey]);
 
 
   const segments = useMemo(
@@ -426,6 +455,50 @@ function Index() {
               ) : (
                 <p className="mt-5 rounded-lg border border-high/40 bg-high-soft p-3 text-[13px] text-pale">
                   {review.error}
+                </p>
+              )
+            ) : null}
+          </section>
+
+          {/* Job description match */}
+          <section className="panel mt-6 rounded-2xl p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-lg font-semibold tracking-tight text-pale">
+                  Does it match the job?
+                </h2>
+                <p className="mt-1 text-[13px] text-mute">
+                  Paste the job description and get a match score, the gaps, and the edits that
+                  close them.
+                </p>
+              </div>
+              <button
+                onClick={() => void askMatch()}
+                disabled={matching}
+                className="rounded-lg bg-high px-4 py-2.5 text-[13px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {matching ? "Comparing…" : match?.ok ? "Compare again" : "Compare with the job"}
+              </button>
+            </div>
+
+            <textarea
+              value={jd}
+              onChange={(e) => setJd(e.target.value)}
+              placeholder="Paste the full job description here…"
+              spellCheck={false}
+              className="mt-4 h-40 w-full resize-y rounded-xl border border-edge bg-surface2 p-3 text-[13px] leading-relaxed text-pale outline-none placeholder:text-mute focus:border-high/60"
+            />
+
+            {matching ? (
+              <div className="glowline mt-5 scan-sweep" />
+            ) : match ? (
+              match.ok && match.markdown ? (
+                <div className="mt-5 border-t border-edge pt-5">
+                  <ReviewMarkdown source={match.markdown} />
+                </div>
+              ) : (
+                <p className="mt-5 rounded-lg border border-high/40 bg-high-soft p-3 text-[13px] text-pale">
+                  {match.error}
                 </p>
               )
             ) : null}
