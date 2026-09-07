@@ -190,7 +190,7 @@ function Index() {
             <button
               onClick={() => {
                 setReport(null);
-                setReview(null);
+                setRewrite(null);
                 setError(null);
               }}
               className="inline-flex items-center gap-2 rounded-full border border-pale/10 bg-pale/5 px-4 py-2 text-[13px] transition-colors hover:bg-pale/10"
@@ -369,23 +369,23 @@ function Index() {
             </aside>
           </div>
 
-          {/* AI review */}
+          {/* Resume rewrite */}
           <section className="panel mt-6 rounded-2xl p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-lg font-semibold tracking-tight text-pale">
-                  Line-by-line rewrite
+                  Rewrite my resume
                 </h2>
                 <p className="mt-1 text-[13px] text-mute">
-                  A second read that quotes your weakest lines back to you and rewrites them.
+                  Get a polished, recruiter-ready version of the same resume — no invented facts.
                 </p>
               </div>
               <button
-                onClick={() => void askAi()}
-                disabled={reviewing}
+                onClick={() => void askRewrite()}
+                disabled={rewriting}
                 className="rounded-lg bg-high px-4 py-2.5 text-[13px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {reviewing ? "Reading…" : review?.ok ? "Read again" : "Get the rewrite"}
+                {rewriting ? "Rewriting…" : rewrite?.ok ? "Generate again" : "Generate rewrite"}
               </button>
             </div>
 
@@ -458,17 +458,44 @@ function Index() {
               )}
             </div>
 
-
-            {reviewing ? (
+            {rewriting ? (
               <div className="glowline mt-5 scan-sweep" />
-            ) : review ? (
-              review.ok && review.markdown ? (
+            ) : rewrite ? (
+              rewrite.ok && rewrite.markdown ? (
                 <div className="mt-5 border-t border-edge pt-5">
-                  <ReviewMarkdown source={review.markdown} />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="font-display text-sm font-medium tracking-tight text-pale">
+                      Rewritten resume
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          void navigator.clipboard.writeText(rewrite.markdown ?? "");
+                          setRewriteCopied(true);
+                          setTimeout(() => setRewriteCopied(false), 1500);
+                        }}
+                        className="rounded-lg border border-edge bg-surface2 px-3 py-1.5 text-[12px] text-pale hover:border-high/50"
+                      >
+                        {rewriteCopied ? "Copied" : "Copy"}
+                      </button>
+                      <button
+                        onClick={() => void handleDownloadDocx()}
+                        disabled={rewriteDownloading}
+                        className="rounded-lg border border-edge bg-surface2 px-3 py-1.5 text-[12px] text-pale hover:border-high/50 disabled:opacity-50"
+                      >
+                        {rewriteDownloading ? "Saving…" : "Download DOCX"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 max-h-[520px] overflow-auto rounded-xl border border-edge bg-surface2 p-4">
+                    <pre className="whitespace-pre-wrap font-mono text-[12.5px] leading-relaxed text-pale">
+                      {rewrite.markdown}
+                    </pre>
+                  </div>
                 </div>
               ) : (
                 <p className="mt-5 rounded-lg border border-high/40 bg-high-soft p-3 text-[13px] text-pale">
-                  {review.error}
+                  {rewrite.error}
                 </p>
               )
             ) : null}
