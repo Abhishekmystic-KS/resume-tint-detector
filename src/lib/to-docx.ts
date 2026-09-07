@@ -10,9 +10,11 @@ import {
   PageNumber,
 } from "docx";
 
-function parseLines(markdown: string) {
+type Section = { type: "heading" | "bullet" | "paragraph"; text: string; level: number };
+
+function parseLines(markdown: string): Section[] {
   const lines = markdown.split(/\r?\n/);
-  const sections: { type: "heading" | "bullet" | "paragraph"; text: string; level: number }[] = [];
+  const sections: Section[] = [];
 
   for (const raw of lines) {
     const line = raw.trimEnd();
@@ -20,13 +22,13 @@ function parseLines(markdown: string) {
     if (!trimmed) continue;
 
     const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
-    if (headingMatch) {
+    if (headingMatch && headingMatch[1] && headingMatch[2]) {
       sections.push({ type: "heading", text: headingMatch[2].trim(), level: headingMatch[1].length });
       continue;
     }
 
     const bulletMatch = trimmed.match(/^([-*••·◦▪‣])\s+(.*)$/);
-    if (bulletMatch) {
+    if (bulletMatch && bulletMatch[2]) {
       sections.push({ type: "bullet", text: bulletMatch[2].trim(), level: 0 });
       continue;
     }
@@ -37,22 +39,27 @@ function parseLines(markdown: string) {
   return sections;
 }
 
-function splitRuns(text: string) {
+function splitRuns(text: string): TextRun[] {
   const parts = text.split(/(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`)/g);
-  return parts
-    .map((part) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return new TextRun({ text: part.slice(2, -2), bold: true });
-      }
-      if (part.startsWith("__") && part.endsWith("__")) {
-        return new TextRun({ text: part.slice(2, -2), bold: true });
-      }
-      if (part.startsWith("`") && part.endsWith("`")) {
-        return new TextRun({ text: part.slice(1, -1), font: "Courier New" });
-      }
-      return new TextRun(part);
-    })
-    .filter((run) => run.root[0].length > 0);
+  const runs: TextRun[] = [];
+
+  for (const part of parts) {
+    if (!part) continue;
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const inner = part.slice(2, -2);
+      if (inner) runs.push(new TextRun({ text: inner, bold: true }));
+    } else if (part.startsWith("__") && part.endsWith("__")) {
+      const inner = part.slice(2, -2);
+      if (inner) runs.push(new TextRun({ text: inner, bold: true }));
+    } else if (part.startsWith("`") && part.endsWith("`")) {
+      const inner = part.slice(1, -1);
+      if (inner) runs.push(new TextRun({ text: inner, font: "Courier New" }));
+    } else {
+      runs.push(new TextRun(part));
+    }
+  }
+
+  return runs;
 }
 
 export async function generateResumeDocx(markdown: string): Promise<Uint8Array> {
@@ -162,7 +169,7 @@ export async function generateResumeDocx(markdown: string): Promise<Uint8Array> 
 }
 
 export function downloadDocx(buffer: Uint8Array, fileName = "rewritten-resume.docx") {
-  const blob = new Blob([buffer], {
+  const blob = new Blob([buffer.buffer], {
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
   const url = URL.createObjectURL(blob);
