@@ -1,4 +1,4 @@
-import { buildMatchPrompt, buildReviewPrompt, MATCH_SYSTEM, REVIEW_SYSTEM } from "./review-prompt";
+import { buildMatchPrompt, buildRewritePrompt, MATCH_SYSTEM, REWRITE_SYSTEM } from "./review-prompt";
 
 export const USER_KEY_STORAGE = "vermilion.gemini-key";
 export const USER_MODEL = "gemini-2.5-flash";
@@ -25,7 +25,7 @@ export function saveUserKey(key: string) {
  * Calls Google's Gemini API straight from the browser with a key the visitor
  * pasted in themselves. Nothing is sent to this app's server.
  */
-export async function reviewWithUserKey(
+export async function rewriteWithUserKey(
   apiKey: string,
   text: string,
   findings: string[],
@@ -38,8 +38,8 @@ export async function reviewWithUserKey(
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: REVIEW_SYSTEM }] },
-        contents: [{ role: "user", parts: [{ text: buildReviewPrompt(text, findings) }] }],
+        systemInstruction: { parts: [{ text: REWRITE_SYSTEM }] },
+        contents: [{ role: "user", parts: [{ text: buildRewritePrompt(text, findings) }] }],
       }),
     });
   } catch {

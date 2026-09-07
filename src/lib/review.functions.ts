@@ -2,25 +2,24 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
-import { MATCH_SYSTEM, REVIEW_SYSTEM as SYSTEM, buildMatchPrompt, buildReviewPrompt } from "./review-prompt";
+import { MATCH_SYSTEM, REWRITE_SYSTEM as SYSTEM, buildMatchPrompt, buildRewritePrompt } from "./review-prompt";
 
 const Input = z.object({
   text: z.string().min(40).max(24000),
   findings: z.array(z.string()).max(30),
 });
 
-export type ReviewResult = {
+export type RewriteResult = {
   ok: boolean;
   markdown?: string;
   error?: string;
 };
 
-
-export const reviewResume = createServerFn({ method: "POST" })
+export const rewriteResume = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => Input.parse(data))
-  .handler(async ({ data }): Promise<ReviewResult> => {
+  .handler(async ({ data }): Promise<RewriteResult> => {
     const key = process.env["LOVABLE_API_KEY"];
-    if (!key) return { ok: false, error: "AI review isn't configured for this app yet." };
+    if (!key) return { ok: false, error: "AI rewrite isn't configured for this app yet." };
 
     const gateway = createLovableAiGatewayProvider(key);
 
@@ -28,17 +27,17 @@ export const reviewResume = createServerFn({ method: "POST" })
       const result = await generateText({
         model: gateway("google/gemini-3.7-flash"),
         system: SYSTEM,
-        prompt: buildReviewPrompt(data.text, data.findings),
+        prompt: buildRewritePrompt(data.text, data.findings),
         maxRetries: 1,
       });
       return { ok: true, markdown: result.text };
     } catch (err) {
       const status = (err as { statusCode?: number; status?: number })?.statusCode ??
         (err as { status?: number })?.status;
-      if (status === 429) return { ok: false, error: "Too many reviews at once. Wait a moment and try again." };
-      if (status === 402) return { ok: false, error: "This app is out of AI credits. Add more in Lovable to re-enable the written review." };
-      if (status === 403) return { ok: false, error: "AI review is disabled for this workspace." };
-      return { ok: false, error: (err as Error)?.message ?? "The AI review failed." };
+      if (status === 429) return { ok: false, error: "Too many rewrites at once. Wait a moment and try again." };
+      if (status === 402) return { ok: false, error: "This app is out of AI credits. Add more in Lovable to re-enable the resume rewrite." };
+      if (status === 403) return { ok: false, error: "AI rewrite is disabled for this workspace." };
+      return { ok: false, error: (err as Error)?.message ?? "The AI rewrite failed." };
     }
   });
 
