@@ -180,8 +180,11 @@ export function downloadDocx(buffer: Uint8Array, fileName = "rewritten-resume.do
   const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 200);
 }
