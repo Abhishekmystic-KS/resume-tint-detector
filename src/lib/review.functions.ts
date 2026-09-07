@@ -48,7 +48,7 @@ const MatchInput = z.object({
 
 export const matchJob = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => MatchInput.parse(data))
-  .handler(async ({ data }): Promise<ReviewResult> => {
+  .handler(async ({ data }): Promise<RewriteResult> => {
     const key = process.env["LOVABLE_API_KEY"];
     if (!key) return { ok: false, error: "AI review isn't configured for this app yet." };
 
