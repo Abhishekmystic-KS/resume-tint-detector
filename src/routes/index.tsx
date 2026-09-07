@@ -45,14 +45,16 @@ function Index() {
   const [active, setActive] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState("");
-  const [review, setReview] = useState<ReviewResult | null>(null);
-  const [reviewing, setReviewing] = useState(false);
+  const [rewrite, setRewrite] = useState<RewriteResult | null>(null);
+  const [rewriting, setRewriting] = useState(false);
+  const [rewriteCopied, setRewriteCopied] = useState(false);
+  const [rewriteDownloading, setRewriteDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const runReview = useServerFn(reviewResume);
+  const runRewrite = useServerFn(rewriteResume);
   const runMatch = useServerFn(matchJob);
   const [jd, setJd] = useState("");
-  const [match, setMatch] = useState<ReviewResult | null>(null);
+  const [match, setMatch] = useState<RewriteResult | null>(null);
   const [matching, setMatching] = useState(false);
   const [userKey, setUserKey] = useState("");
   const [keyOpen, setKeyOpen] = useState(false);
@@ -69,7 +71,7 @@ function Index() {
   const run = useCallback(async (file: File) => {
     setBusy(true);
     setError(null);
-    setReview(null);
+    setRewrite(null);
     setMatch(null);
     try {
       const { text, meta } = await extractFile(file);
@@ -93,31 +95,42 @@ function Index() {
       return;
     }
     setError(null);
-    setReview(null);
+    setRewrite(null);
     setMatch(null);
     setReport(scanResume(paste, { fileName: "pasted text" }));
     setActive(null);
     setPasteOpen(false);
   }, [paste]);
 
-  const askAi = useCallback(async () => {
+  const askRewrite = useCallback(async () => {
     if (!report) return;
-    setReviewing(true);
-    setReview(null);
+    setRewriting(true);
+    setRewrite(null);
     const text = report.text.slice(0, 24000);
     const findings = report.findings.map((f) => f.title);
     try {
       const trimmed = userKey.trim();
       const res = trimmed
-        ? await reviewWithUserKey(trimmed, text, findings)
-        : await runReview({ data: { text, findings } });
-      setReview(res);
+        ? await rewriteWithUserKey(trimmed, text, findings)
+        : await runRewrite({ data: { text, findings } });
+      setRewrite(res);
     } catch (e) {
-      setReview({ ok: false, error: (e as Error).message });
+      setRewrite({ ok: false, error: (e as Error).message });
     } finally {
-      setReviewing(false);
+      setRewriting(false);
     }
-  }, [report, runReview, userKey]);
+  }, [report, runRewrite, userKey]);
+
+  const handleDownloadDocx = useCallback(async () => {
+    if (!rewrite?.ok || !rewrite.markdown) return;
+    setRewriteDownloading(true);
+    try {
+      const buffer = await generateResumeDocx(rewrite.markdown);
+      downloadDocx(buffer, `vermilion-rewrite-${report?.meta.fileName?.replace(/\.[^.]+$/, "") ?? "resume"}.docx`);
+    } finally {
+      setRewriteDownloading(false);
+    }
+  }, [rewrite, report?.meta.fileName]);
 
   const askMatch = useCallback(async () => {
     if (!report) return;
