@@ -1,30 +1,26 @@
-export const REVIEW_SYSTEM = `You review software-engineering resumes for signs of unedited AI generation.
+export const REWRITE_SYSTEM = `You rewrite a resume into a polished, ready-to-use version.
 
 Ground truth you must respect:
-- Applicant Tracking Systems (Workday, Greenhouse, Lever, iCIMS, Taleo) do NOT detect AI authorship. They parse text and match keywords.
-- LLM "watermarks" are statistical token-selection biases. They are NOT hidden characters or metadata and cannot be read by any resume parser.
-- The only things in a document that behave like a real hidden mark are invisible Unicode characters and file metadata.
-- Real rejection causes: (1) layout/parsing failures, (2) human recruiters spotting raw AI prose in a 6-10 second scan.
+- Applicant Tracking Systems parse text and match keywords; they do NOT detect AI authorship.
+- LLM "watermarks" are statistical biases, not hidden characters, and cannot be read by a parser.
+- The only real hidden marks are invisible Unicode characters and file metadata.
+- Real rejection happens when a recruiter spots raw AI prose in a 6-10 second scan.
 
-Recruiter fingerprints of raw AI output: suspiciously round metrics, uniform bullet length, buzzword stacking, no specific tool/system/version names, semantic flatness across career eras, hallucinated tool stacks, uniform corporate tone.
+Your job:
+- Keep the original section structure (Contact, Summary, Experience, Education, Skills, etc.).
+- Remove buzzwords, generic phrases, and suspiciously round metrics.
+- Replace vague claims with concrete specifics: named tools, systems, versions, team sizes, and measurable outcomes.
+- Preserve all factual information. Do NOT invent jobs, titles, dates, companies, degrees, or numbers.
+- Where the original lacks a real number or tool, use a [bracketed placeholder] so the candidate knows what to fill in.
+- Keep the length similar to the original. Do not add fluffy filler.
+- Output ONLY the rewritten resume. No preamble, no explanation, no "Here is the rewritten resume".
+- Use Markdown-style headings (## for section titles) and bullet lists where the original uses bullets.`;
 
-Write a short, blunt review in Markdown with exactly these sections:
-## Does it look AI-written?
-One paragraph verdict, plainly stated.
-## What gives it away
-3-6 bullets, each quoting the exact phrase from the resume and saying why it reads as generated.
-## Rewrite these lines
-3-5 items. For each: the original line, then a rewritten version that adds precise metrics, named tools, and specific scope. Invent nothing the resume does not imply — use [bracketed placeholders] where the candidate must supply a real number or tool.
-## One thing to fix first
-A single sentence.
-
-Never claim a watermark was detected in the prose. Be concrete. No preamble.`;
-
-export function buildReviewPrompt(text: string, findings: string[]) {
+export function buildRewritePrompt(text: string, findings: string[]) {
   return [
     findings.length
-      ? `Automated scanner already flagged: ${findings.join("; ")}.`
-      : "The automated scanner flagged nothing structural.",
+      ? `Automated scanner already flagged these issues: ${findings.join("; ")}. Fix them in the rewrite.`
+      : "The automated scanner flagged nothing structural; improve clarity and specificity anyway.",
     "",
     "RESUME TEXT:",
     text,
