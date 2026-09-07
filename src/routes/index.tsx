@@ -3,9 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSegments, cleanText, scanResume, type Finding, type ScanReport } from "@/lib/detect";
 import { extractFile } from "@/lib/extract";
-import { matchJob, reviewResume, type ReviewResult } from "@/lib/review.functions";
-import { loadUserKey, matchWithUserKey, reviewWithUserKey, saveUserKey } from "@/lib/user-gemini";
-import { ReviewMarkdown } from "@/components/ReviewMarkdown";
+import { matchJob, rewriteResume, type RewriteResult } from "@/lib/review.functions";
+import { loadUserKey, matchWithUserKey, rewriteWithUserKey, saveUserKey } from "@/lib/user-gemini";
+import { downloadDocx, generateResumeDocx } from "@/lib/to-docx";
 
 export const Route = createFileRoute("/")({
   head: () => ({

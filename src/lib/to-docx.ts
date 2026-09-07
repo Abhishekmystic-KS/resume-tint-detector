@@ -169,7 +169,8 @@ export async function generateResumeDocx(markdown: string): Promise<Uint8Array> 
 }
 
 export function downloadDocx(buffer: Uint8Array, fileName = "rewritten-resume.docx") {
-  const blob = new Blob([buffer.buffer], {
+  const slice = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  const blob = new Blob([slice], {
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
   const url = URL.createObjectURL(blob);
